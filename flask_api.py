@@ -1,8 +1,16 @@
 from flask import Flask, redirect, url_for, request
 import jsons
+import mysql.connector
 
 app = Flask(__name__)
 
+def connect():
+    return mysql.connector.connect(
+        host="localhost",
+        user="root",
+        password="password",
+        database="myDB"
+    )
 
 class User:
     def __init__(self, username, password, email):
@@ -28,9 +36,25 @@ def success(name):
 def login():
     username = request.form['username']
     password = request.form['password']
-    # TODO: Return Actual User object
-    user = User(username, password, 'garbage@gmail.com')
-    return jsons.dump(user)
+    conn = connect()
+    cursor = conn.cursor()
+
+    cursor.execute(
+        f"SELECT * FROM users WHERE username = '{username}' AND password = '{password}'"
+    )
+    rows = cursor.fetchall()
+    conn.close()
+    if len(rows) == 0:
+        return {
+            "status": "fail",
+            "message": "Unable to find user with specified username / password"
+        }
+    else:
+        #TODO: this is a POST? should we record tokens or time of login?
+        return {
+            "status": "success",
+            "message": f"Welcome, {username}!"
+        }
 
 
 # - example: http://127.0.0.1:5000/register
@@ -40,9 +64,36 @@ def register():
     username = request.form['username']
     password = request.form['password']
     email = request.form['email']
-    # TODO: Verify that username does not already exist
-    user = User(username, password, email)
-    return jsons.dump(user)
+    
+    conn = connect()
+    cursor = conn.cursor()
+
+    # Verify that username does not already exist
+    cursor.execute(
+        f"SELECT * FROM users WHERE username = '{username}'"
+    )
+    rows = cursor.fetchall()
+    if len(rows) > 0:
+        conn.close()
+        return {
+            "status": "fail", 
+            "message": "User already exists"
+        }
+    else:
+        query = "INSERT INTO users VALUES(%(username)s, %(password)s, %(email)s)"
+        userData = {
+            "username": username, 
+            "password": password, 
+            "email": email
+        }
+        cursor.execute(query, userData)
+        conn.commit()
+        conn.close()
+        return {
+            "status": "success", 
+            "message": "User created successfully",
+            "user": userData
+        }
 
 
 # - example: http://127.0.0.1:5000/score
@@ -52,65 +103,93 @@ def score():
     game_id = request.form['game-id']
     game_score = request.form['score']
     param_value = request.form['param-id']
+    
+    conn = connect()
+    cursor = conn.cursor()
     # TODO: write score to database
+    cursor.execute(
+        """
+    
+        """
+    )
+    conn.close()
+
+
     toReturn = """{
-    "status": "success",
-    "message": ""
-}"""
+        "status": "success",
+        "message": ""
+    }"""
     return toReturn
 
 
-# - examle: http://127.0.0.1:5000/games
+# - example: http://127.0.0.1:5000/games
 @app.route('/games', methods=['GET'])
 def games():
-    # TODO: get list of games from database
-    toReturn = """{
-    "status": "success",
-    "games": [
-        {
-            "game_id": 1,
-            "name": "Catan"
-        }
-    ]
-}"""
+    conn = connect()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        SELECT * FROM games
+        """
+    )
+
+    results = []
+    for i in cursor:
+        results.append({
+            "game_id": i[0],
+            "name": i[1],
+            "publisher": i[2],
+            "description": i[3],
+            "user_id": i[4],
+        })
+
+    toReturn = {
+        "data": results
+    }
+
+    conn.close()
+
     return toReturn
 
 
-# - example: http://127.0.0.1:5000/game?game-id=1
+
+# - example: http://127.0.0.1:5000/game?game_id=1
 @app.route('/game', methods=['GET'])
 def game():
-    # TODO: get list game info form database
-    game_id = request.args.get('game-id')
-    toReturn = """{
-    "status": "success"
-    "game_id": "game_id_string",
-    "name": "name_string",
-    "publisher": "publisher_string",
-    "description": "description_string",
-    "username": "username_string",
-    "params":[
-        {
-            "param_id": "game_id_string",
-            "name": "game_name_string",
-            "description": "param_description_string",
-            "value": "param_value_string",
-        },
-        {
-            "param_id": "game_id_string",
-            "name": "game_name_string",
-            "description": "param_description_string",
-            "value": "param_value_string",
-        },
-    ],
-}"""
+    game_id = request.args.get('game_id')
+    
+    conn = connect()
+    cursor = conn.cursor()
+    query = """
+        SELECT * FROM games
+        WHERE game_id = {0}
+    """
+    cursor.execute(query.format(game_id))
+
+    results = []
+    for i in cursor:
+        results.append({
+            "game_id": i[0],
+            "name": i[1],
+            "publisher": i[2],
+            "description": i[3],
+            "user_id": i[4],
+        })
+
+    toReturn = {
+        "data": results
+    }
+
+    conn.close()
+    
     return toReturn
 
 
-# - example: http://127.0.0.1:5000/game-scores?game-id=1&param-id=1
+# - example: http://127.0.0.1:5000/game-scores?game_id=1&param_id=1
 @app.route('/game-scores', methods=['GET'])
 def get_game_scores():
-    game_id = request.args.get('game-id')
-    param_id = request.args.get('game-id')
+    game_id = request.args.get('game_id')
+    param_id = request.args.get('game_id')
     # TODO: get list of scores from database
     toReturn = """{
     "status": "success"
