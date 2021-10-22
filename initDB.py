@@ -89,13 +89,10 @@ cursor.execute(
   )
   """)
 
-# TODO: fill with dummy data
+# TODO: @Ashton fill with dummy data
 print("Filling with dummy data...")
-
 cursor.execute("INSERT INTO users VALUES ('brody', 'password', 'brody@rasmus.sen')")
 cursor.execute("INSERT INTO games (name, publisher, description, username) VALUES ('Catan', 'pub', 'get sheep', 'brody')")
-
-
 # cursor.execute("INSERT INTO ... ")
 
 conn.commit()

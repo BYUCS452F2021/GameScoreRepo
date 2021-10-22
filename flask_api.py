@@ -40,9 +40,16 @@ def login():
     conn = connect()
     cursor = conn.cursor()
 
-    cursor.execute(
-        f"SELECT * FROM users WHERE username = '{username}' AND password = '{password}'"
-    )
+    query = """
+        SELECT * FROM users 
+        WHERE username = %(username)s 
+        AND password = %(password)s 
+    """
+    login_data = {
+        'username': username, 
+        'password': password
+    }
+    cursor.execute(query, login_data)
     rows = cursor.fetchall()
     conn.close()
     if len(rows) == 0:
@@ -126,7 +133,6 @@ def score():
             "message": "Invalid Username"
         }
 
-
     # insert new score
     query = (
         """
@@ -142,7 +148,6 @@ def score():
     cursor.execute(query, score_data)
     conn.commit()
     conn.close()
-
 
     toReturn = {
         "status": "success",
@@ -180,7 +185,6 @@ def games():
     conn.close()
 
     return toReturn
-
 
 
 # - example: http://127.0.0.1:5000/game?game_id=1
@@ -245,6 +249,7 @@ def get_user_scores():
     return {
         "data": rows
     }
+
 # - example: http://127.0.0.1:5000/user?username=test
 @app.route('/user', methods=['GET'])
 def get_user():
