@@ -11,7 +11,7 @@ print("Connection Successful")
 
 cursor = conn.cursor()
 
-# TODO: Remove these, just for debugging rn
+print("Dropping old tables...")
 cursor.execute("CREATE DATABASE IF NOT EXISTS myDB")  # TODO: you'll have to manually create myDB the first time
 cursor.execute("DROP TABLE IF EXISTS ScoreParams")
 cursor.execute("DROP TABLE IF EXISTS Params")
@@ -19,6 +19,7 @@ cursor.execute("DROP TABLE IF EXISTS Scores")
 cursor.execute("DROP TABLE IF EXISTS Games")
 cursor.execute("DROP TABLE IF EXISTS Users")
 
+print("Creating new tables...")
 # USERS
 cursor.execute(
   """
@@ -39,9 +40,9 @@ cursor.execute(
   name         VARCHAR(255)        NOT NULL,
   publisher    VARCHAR(255)        NOT NULL,
   description  VARCHAR(255)        NOT NULL,
-  user_id      VARCHAR(255)        NOT NULL,
+  username     VARCHAR(255)        NOT NULL,
   PRIMARY KEY (game_id),
-  FOREIGN KEY (user_id) REFERENCES Users(username)
+  FOREIGN KEY (username) REFERENCES Users(username)
   )
   """
   )
@@ -53,11 +54,11 @@ cursor.execute(
   score_id INT AUTO_INCREMENT  NOT NULL, 
   game_id  INT                 NOT NULL, 
   value    INT                 NOT NULL, 
-  user_id  VARCHAR(255)        NOT NULL,
+  username VARCHAR(255)        NOT NULL,
   date     DATETIME DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (score_id),
   FOREIGN KEY (game_id) REFERENCES Games(game_id),
-  FOREIGN KEY (user_id) REFERENCES Users(username)
+  FOREIGN KEY (username) REFERENCES Users(username)
   )
   """
   )
@@ -77,7 +78,7 @@ cursor.execute(
   """
   )
 
-# PARAMS
+# SCOREPARAMS
 cursor.execute(
   """
   CREATE TABLE IF NOT EXISTS ScoreParams (
@@ -89,6 +90,15 @@ cursor.execute(
   """)
 
 # TODO: fill with dummy data
+print("Filling with dummy data...")
 
+cursor.execute("INSERT INTO users VALUES ('brody', 'password', 'brody@rasmus.sen')")
+cursor.execute("INSERT INTO games (name, publisher, description, username) VALUES ('Catan', 'pub', 'get sheep', 'brody')")
+
+
+# cursor.execute("INSERT INTO ... ")
+
+conn.commit()
 conn.close()
-print("Connection Closed")
+
+print("Database Successfully initialized!")
