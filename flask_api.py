@@ -220,11 +220,9 @@ def game():
 @app.route('/game_scores', methods=['GET'])
 def get_game_scores():
     game_id = request.args.get('game_id')
-    param_id = request.args.get('param_id')
-    # TODO: get list of scores from database
+    
     conn = connect()
     cursor = conn.cursor()
-
     cursor.execute(f"SELECT * FROM scores WHERE game_id = {game_id}")
     rows = cursor.fetchall()
     conn.close()
@@ -238,11 +236,10 @@ def get_game_scores():
 @app.route('/user_scores', methods=['GET'])
 def get_user_scores():
     username = request.args.get('username')
-    # TODO: get list of scores from database
+
     conn = connect()
     cursor = conn.cursor()
-
-    cursor.execute(f"SELECT * FROM scores WHERE username = {username}")
+    cursor.execute(f"SELECT * FROM scores WHERE username = '{username}'")
     rows = cursor.fetchall()
     conn.close()
 
@@ -254,9 +251,23 @@ def get_user_scores():
 @app.route('/user', methods=['GET'])
 def get_user():
     username = request.args.get('username')
-    # TODO: get user data from datbase
-    user = User(username, "password", 'garbage@gmail.com')
-    return jsons.dump(user)
+    
+    conn = connect()
+    cursor = conn.cursor()
+    cursor.execute(f"SELECT * FROM users WHERE username = '{username}' LIMIT 1")
+    rows = cursor.fetchall()
+    conn.close()
+
+    if len(rows) < 1:
+        return {
+            "status": "fail",
+            "message": "User not found"
+        }
+    else:
+        return {
+            "status": "success",
+            "user": rows[0],
+        }
 
 if __name__ == '__main__':
     app.run(debug=True)
