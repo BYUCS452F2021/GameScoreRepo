@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+PWD=`pwd`
+python3 -m venv .venv
+echo $PWD
+activate () {
+    . $PWD/.venv/bin/activate
+}
+activate
+pip install -r requirements.txt
+python3 initDB.py

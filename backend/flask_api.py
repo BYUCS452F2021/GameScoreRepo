@@ -1,15 +1,18 @@
 import datetime
-from flask import Flask, redirect, url_for, request
-import jsons
+from flask import Flask, redirect, url_for, request, jsonify
+from flask.json import JSONDecoder
+from flask_cors import CORS
+import json
 import mysql.connector
 
 app = Flask(__name__)
+CORS(app)
 
 def connect():
     return mysql.connector.connect(
         host="localhost",
         user="root",
-        password="password",
+        password="",
         database="myDB"
     )
 
@@ -26,6 +29,11 @@ class Game:
         self.name = name
 
 
+def prepare_response(data):
+    response = jsonify(data)
+    return response
+
+
 @app.route('/success/<name>')
 def success(name):
     return 'welcome %s' % name
@@ -35,8 +43,10 @@ def success(name):
 #   should include parameters in form (form-data in postman)
 @app.route('/login', methods=['POST'])
 def login():
-    username = request.form['username']
-    password = request.form['password']
+    form = json.loads(request.data.decode())
+    username = form['username']
+    password = form['password']
+
     conn = connect()
     cursor = conn.cursor()
 
@@ -52,26 +62,34 @@ def login():
     cursor.execute(query, login_data)
     rows = cursor.fetchall()
     conn.close()
+
+    result = {}
     if len(rows) == 0:
-        return {
+        result = {
             "status": "fail",
             "message": "Unable to find user with specified username / password"
         }
     else:
         #TODO: this is a POST? should we record tokens or time of login?
-        return {
+        result = {
             "status": "success",
-            "message": f"Welcome, {username}!"
+            "message": "",
+            'username': rows[0][0],
+            'email': rows[0][2]
         }
+    return prepare_response(result)
+
+
 
 
 # - example: http://127.0.0.1:5000/register
 #   should include parameters in form (form-data in postman)
 @app.route('/register', methods=['POST'])
 def register():
-    username = request.form['username']
-    password = request.form['password']
-    email = request.form['email']
+    form = json.loads(request.data.decode())
+    username = form['username']
+    password = form['password']
+    email = form['email']
     
     conn = connect()
     cursor = conn.cursor()
@@ -81,9 +99,10 @@ def register():
         f"SELECT * FROM users WHERE username = '{username}'"
     )
     rows = cursor.fetchall()
+    result = {}
     if len(rows) > 0:
         conn.close()
-        return {
+        result =  {
             "status": "fail", 
             "message": "User already exists"
         }
@@ -97,20 +116,23 @@ def register():
         cursor.execute(query, userData)
         conn.commit()
         conn.close()
-        return {
+        result =  {
             "status": "success", 
-            "message": "User created successfully",
-            "user": userData
+            "message": "",
+            "username": username,
+            "email": email
         }
+    return prepare_response(result)
 
 
 # - example: http://127.0.0.1:5000/score
 #   should include parameters in form (form-data in postman)
 @app.route('/score', methods=['POST'])
 def score():
-    game_id = request.form['game_id']
-    value = request.form['value']
-    username = request.form['username']
+    form = json.loads(request.data.decode())
+    game_id = form['game_id']
+    value = form['value']
+    username = form['username']
     
     conn = connect()
     cursor = conn.cursor()
@@ -119,19 +141,19 @@ def score():
     cursor.execute(f"SELECT * FROM games WHERE game_id = {game_id} LIMIT 1")
     rows = cursor.fetchall()
     if len(rows) < 1:
-        return {
+        return prepare_response({
             "status": "fail",
             "message": "Invalid Game ID"
-        }
+        })
 
     # check valid user
     cursor.execute(f"SELECT * FROM users WHERE username = '{username}' LIMIT 1")
     rows = cursor.fetchall()
     if len(rows) < 1:
-        return {
+        return  prepare_response({
             "status": "fail",
             "message": "Invalid Username"
-        }
+        })
 
     # insert new score
     query = (
@@ -151,10 +173,9 @@ def score():
 
     toReturn = {
         "status": "success",
-        "message": "New score successfully recorded!",
-        "score": score_data,
+        "message": ""
     }
-    return toReturn
+    return prepare_response(toReturn)
 
 
 # - example: http://127.0.0.1:5000/games
@@ -178,13 +199,8 @@ def games():
             "username": i[4],
         })
 
-    toReturn = {
-        "data": results
-    }
-
     conn.close()
-
-    return toReturn
+    return prepare_response(results)
 
 
 # - example: http://127.0.0.1:5000/game?game_id=1
@@ -207,13 +223,9 @@ def game():
             "username": i[4],
         })
 
-    toReturn = {
-        "data": results
-    }
-
     conn.close()
     
-    return toReturn
+    return prepare_response(results)
 
 
 # - example: http://127.0.0.1:5000/game_scores?game_id=1&param_id=1
@@ -227,10 +239,7 @@ def get_game_scores():
     rows = cursor.fetchall()
     conn.close()
 
-    return {
-        "data": rows
-    }
-
+    return prepare_response(rows)
 
 # - example: http://127.0.0.1:5000/user_scores?username=test
 @app.route('/user_scores', methods=['GET'])
@@ -243,9 +252,7 @@ def get_user_scores():
     rows = cursor.fetchall()
     conn.close()
 
-    return {
-        "data": rows
-    }
+    return prepare_response(rows)
 
 # - example: http://127.0.0.1:5000/user?username=test
 @app.route('/user', methods=['GET'])
@@ -259,15 +266,16 @@ def get_user():
     conn.close()
 
     if len(rows) < 1:
-        return {
+        return prepare_response({
             "status": "fail",
             "message": "User not found"
-        }
-    else:
-        return {
-            "status": "success",
-            "user": rows[0],
-        }
+        })
+
+    return prepare_response({
+        "status": "success",
+        "username": rows[0][0],
+        "email": rows[0][2],
+    })
 
 if __name__ == '__main__':
     app.run(debug=True)
