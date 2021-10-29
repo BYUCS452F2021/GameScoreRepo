@@ -1,0 +1,21 @@
+.App {
+  text-align: center;
+  background-color: var(--white-color);
+  height: 100vh;
+  display: flex;
+  color: var(--text-color);
+  flex-direction: column;
+}
+
+body > #root{
+  height: 100vh;
+}
+
+a:link {
+  text-decoration: none;
+}
+
+body {
+  background-color: var(--white-color);
+  margin: 0;
+}

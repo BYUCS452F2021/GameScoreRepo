@@ -3,7 +3,7 @@ import mysql.connector
 conn = mysql.connector.connect(
   host="localhost",
   user="root",
-  password="password",
+  password="",
   database="myDB"
 )
 
@@ -101,7 +101,7 @@ cursor.execute("INSERT INTO users VALUES ('nate', 'password4', 'nate@fasta.bend'
 cursor.execute("INSERT INTO games (name, publisher, description, username) VALUES ('Catan', 'Kosmos', 'Settle a new land!', 'brody')")
 cursor.execute("INSERT INTO games (name, publisher, description, username) VALUES ('Ticket to Ride', 'Days of Wonder', 'Build choo-choo trains!', 'ashton')")
 cursor.execute("INSERT INTO games (name, publisher, description, username) VALUES ('Carcassonne', 'Rio Grande Games', 'Shape the medieval landscape of France.', 'braydon')")
-cursor.execute("INSERT INTO games (name, publisher, description, username) VALUES ('Terraform Mars', 'FryxGames', 'Make Mars habitable!', 'jared')")
+cursor.execute("INSERT INTO games (name, publisher, description, username) VALUES ('Terraforming Mars', 'FryxGames', 'Make Mars habitable!', 'jared')")
 cursor.execute("INSERT INTO games (name, publisher, description, username) VALUES ('7 Wonders', 'Repos Production', 'Earn points by building stuff with cards.', 'nate')")
 # Scores
 cursor.execute("INSERT INTO scores (game_id, value, username) VALUES (1, 11, 'brody')")

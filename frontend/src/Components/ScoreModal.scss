@@ -1,0 +1,99 @@
+@mixin size($width: inherit, $height: inherit) {
+  width: $width;
+  height: $height;
+}
+
+@mixin flex($align, $justify, $direction: row) {
+  display: flex;
+  align-items: $align;
+  justify-content: $justify;
+  flex-direction: $direction;
+}
+
+@mixin border-radius($topLeft:50%, $topRight:50%, $botLeft:50%, $botRight:50%) {
+  border-top-left-radius: $topLeft;
+  border-top-right-radius: $topRight;
+  border-bottom-left-radius: $botLeft;
+  border-bottom-right-radius: $botRight;
+}
+
+$signup-container-shadow: 0 2px 6px rgba(0, 0, 0, 0.3), 0 2px 4px rgba(0, 0, 0, 0.6);
+$button-shadow: 0 1px 4px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.12);
+
+.modal-page {
+  @include flex(center, center, column);
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+  
+.modal-container {
+  width: 100%;
+  max-width: 400px;
+  height: fit-content;
+  @include flex(center, center, column);
+  margin: 0 auto;
+  background-color: var(--white-color);
+  box-shadow: $signup-container-shadow;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  margin-top: 10px;
+  border-radius: 6px;
+  
+  .title {
+    text-transform: capitalize;
+    font-size: 1.6em;
+    font-weight: 300;
+  }
+  .game-menu {
+    min-width: 200px;
+    margin-left: 10px;
+  }
+  .entry-line {
+    margin-top: 15px;;
+    width: 80%;
+    display: flex;
+    flex-flow: row;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .exit-bar {
+    padding: 0;
+    display: flex;
+    flex-direction: row-reverse;
+    width: 100%;
+
+    .exit-button {
+      margin-left: 10px;
+      margin-right: 10px;
+      font-weight: 700;
+      font-size: medium;
+      padding: 10px;
+      background-color: var(--white-color);
+      box-shadow: 0px 3px 20px 3px rgba(var(--white-color),0.3);
+      color: lightgrey;
+    }
+  }
+  
+  .submit-button {
+    @include border-radius(5px, 5px, 5px, 5px);
+    width: 60%;
+    padding: 20px 15px;
+    background-color: var(--primary-color);
+    color: var(--white-color);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 400;
+    margin: 40px 0;
+    
+    &:hover, &:focus {
+      box-shadow: 0px 3px 20px 3px rgba(var(--primary-color),0.3);
+      background-color: var(--primary-color);
+    }
+  }
+}

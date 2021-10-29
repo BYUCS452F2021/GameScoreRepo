@@ -1,0 +1,157 @@
+@mixin size($width: inherit, $height: inherit) {
+  width: $width;
+  height: $height;
+}
+
+@mixin flex($align, $justify, $direction: row) {
+  display: flex;
+  align-items: $align;
+  justify-content: $justify;
+  flex-direction: $direction;
+}
+
+@mixin border-radius($topLeft:50%, $topRight:50%, $botLeft:50%, $botRight:50%) {
+  border-top-left-radius: $topLeft;
+  border-top-right-radius: $topRight;
+  border-bottom-left-radius: $botLeft;
+  border-bottom-right-radius: $botRight;
+}
+
+$login-container-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.12);
+$button-shadow: 0 1px 4px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.12);
+
+.button {
+  @include flex(center, center);
+  box-shadow: $button-shadow;
+  background-color: --var(--primary-color);
+  text-transform: capitalize;
+  cursor: pointer;
+  
+  &:hover, &:focus {
+    transition: 0.15s ease-in-out;
+  }
+}
+
+.login-page {
+  @include flex(center, center, column);
+  flex: 1;
+  width: 100%;
+}
+
+.login-container {
+  @include size(400px, fit-content);
+  @include flex(center, center, column);
+  margin: 0 auto;
+  background-color: var(--white-color);
+  box-shadow: $login-container-shadow;
+  overflow: hidden;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  margin-top: 10px;
+  
+  .title {
+    text-transform: capitalize;
+    font-size: 1.6em;
+    font-weight: 300;
+    padding: 60px 0;
+    padding-bottom: 10px;
+  }
+  
+  .login-button {
+    @include border-radius(5px, 5px, 5px, 5px);
+    width: 60%;
+    padding: 20px 15px;
+    background-color: var(--primary-color);
+    color: var(--white-color);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 400;
+    margin: 40px 0;
+    
+    &:hover, &:focus {
+      box-shadow: 0px 3px 20px 3px rgba(var(--primary-color),0.3);
+      background-color: var(--primary-color);
+    }
+  }
+}
+
+.fluid-input {
+  @include size(80%, 50px);
+  max-width: 450px;
+  position: relative;
+  margin: 20px;
+  
+  &-bg {
+    @include size(calc(100% - 10%), 100%);
+    @include flex(center, flex-start);
+    position: absolute;
+    left: 5%;
+    top: 0;
+    color: var(--primary-color);
+    font-weight: 400;
+    font-size: 0.9em;
+    transition: 0.3s ease-in-out;
+    text-transform: capitalize;
+  }
+  
+  &-holder {
+    @include size(100%, 100%);
+    position: absolute;
+    top: 0;
+    left: 0;
+    @include border-radius(5px, 5px, 5px, 5px);
+    will-change: transform, box-shadow;
+    transition: 0.2s ease-in-out;
+    background-color: var(--white-color);
+  }
+  &-input {
+    @include size();
+    @include border-radius(5px, 5px, 5px, 5px);
+    background-color: var(--white-color);
+    font-size: 1.05em;
+    padding: 0 2%;
+    margin-left: -2%;
+    
+    &:focus {
+      outline: None;
+    }
+  }
+  
+  &-label {
+    @include size(calc(100% - 10%), 100%);
+    @include flex(center, flex-start);
+    position: absolute;
+    font-size: 1em;
+    left: 5%;
+    top: 0;
+    color: var(--primary-color);
+    font-weight: 400;
+    text-transform: capitalize;
+    pointer-events: none;
+    transition: 
+      transform 0.2s ease-in-out,
+      font-size 0.2s 0.15s ease-in-out;
+    will-change: transform, font-size;
+  }
+  
+  &--focus & {
+    &-holder {
+      box-shadow: 0px 5px 20px 0px rgba(var(--primary-color),0.3);
+    }
+    
+    &-bg {
+      transform: translateY(-40px);
+      transition: 0.2s 0.2s ease-in-out;
+    }
+    
+    &-label {
+      transform: translateY(-40px);
+    }
+  }
+  
+  &--open & {
+    &-label {
+      transform: translateY(-40px);
+    }
+  }
+}
