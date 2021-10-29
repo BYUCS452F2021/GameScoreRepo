@@ -1,0 +1,69 @@
+@mixin flex($align, $justify, $direction: row) {
+  display: flex;
+  align-items: $align;
+  justify-content: $justify;
+  flex-direction: $direction;
+}
+
+
+.nav {
+  font-family: 'Zilla Slab', sans-serif;
+  height: fit-content;
+  padding: 10px;
+  display: flex;
+  justify-content: space-between;
+  background-color: var(--white-color);
+  align-items: center;
+  position: relative;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 0;
+}
+
+.menuGroup {
+  font-family: 'Zilla Slab', sans-serif;
+  height: 100%;
+  display: flex;
+  justify-content: space-evenly;
+  align-items: center;
+  position: relative;
+}
+
+.navbarLogo {
+  color: var(--primary-color);
+  font-size: larger;
+  font-weight: 900;
+}
+
+.menuItem {
+  padding: 14px 10px;
+  outline: none;
+  color: var(--text-color);
+}
+
+.menuItem:hover {
+  color: var(--secondary-color);
+}
+
+$button-shadow: 0 1px 4px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.12);
+
+.button {
+  @include flex(center, center);
+  box-shadow: $button-shadow;
+  background-color: var(--primary-color);
+  color: var(--white-color);
+  text-transform: capitalize;
+  cursor: pointer;
+  border-radius: 6px;
+  
+  &:hover, &:focus {
+    transition: 0.15s ease-in-out;
+  }
+}
+
+@media (max-width: 768px) {
+  .menuItem {
+    display: none;
+  }
+  .nav {
+    width: 100vw;
+  }
+}

@@ -1,0 +1,21 @@
+.game-tile {
+    border-radius: 6px;
+    border:2px solid var(--primary-color);
+    cursor: pointer;
+    margin: 10px;
+    margin-top: 0;
+    width: 300px;
+    height: 300px;
+    overflow: hidden;
+    box-shadow:  0 2px 6px rgba(0, 0, 0, 0.3), 0 2px 4px rgba(0, 0, 0, 0.6);
+}
+
+.game-tile:hover {
+    border-color: var(--secondary-color);
+    box-shadow: none;
+}
+
+.game-picture {
+    width: 300px;
+    height: 300px;
+}

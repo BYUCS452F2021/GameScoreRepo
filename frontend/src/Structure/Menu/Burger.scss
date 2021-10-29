@@ -1,0 +1,26 @@
+.burger {
+  width: 2rem;
+  height: 2rem;
+  z-index: 20;
+  display: none;
+  cursor: pointer;
+  font-family: 'Zilla Slab', sans-serif;
+}
+
+.menus {
+  width: 2rem;
+  height: 0.25rem;
+  background-color: var(--text-color);
+  border-radius: 10px;
+  transform-origin: 1px;
+  transition: all 0.3s linear;
+  cursor: pointer;
+}
+
+@media (max-width: 768px) {
+  .burger {
+    display: flex;
+    justify-content: space-around;
+    flex-flow: column nowrap;
+  }
+}
