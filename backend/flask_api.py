@@ -13,14 +13,8 @@ CORS(app)
 dynamo = boto3.resource('dynamodb')
 user_table = dynamo.Table('users')
 game_table = dynamo.Table('games')
+score_table = dynamo.Table('scores')
 
-# def connect():
-#     return mysql.connector.connect(
-#         host="localhost",
-#         user="root",
-#         password="",
-#         database="myDB"
-#     )
 
 class User:
     def __init__(self, username, password, email):
@@ -125,52 +119,98 @@ def register():
 @app.route('/score', methods=['POST'])
 def score():
     form = json.loads(request.data.decode())
-    game_id = form['game_id']
+    game = form['game']   # TODO: I changed this to game's name. The name of the game is a unique key and DynamoDB doesn't support auto-incremented primary keys
     value = form['value']
     username = form['username']
-    
-    conn = connect()
-    cursor = conn.cursor()
+    # Not sure how this is coming in as data...
+    # params = form['parameters']
 
     # check valid game
-    cursor.execute(f"SELECT * FROM games WHERE game_id = {game_id} LIMIT 1")
-    rows = cursor.fetchall()
-    if len(rows) < 1:
+    response = game_table.get_item(
+        Key={
+            "name": game
+        }
+    )
+    if response.get('Item') is None:
         return prepare_response({
             "status": "fail",
-            "message": "Invalid Game ID"
+            "message": "Invalid Game"
         })
+    
+    # TODO: we should probably check that the given parameters
+    # match the parameters in the game's attributes
 
     # check valid user
-    cursor.execute(f"SELECT * FROM users WHERE username = '{username}' LIMIT 1")
-    rows = cursor.fetchall()
-    if len(rows) < 1:
-        return  prepare_response({
+    response = user_table.get_item(
+        Key={
+            "username": username
+        }
+    )
+    if response.get('Item') is None:
+        return prepare_response({
             "status": "fail",
             "message": "Invalid Username"
         })
 
     # insert new score
-    query = (
-        """
-        INSERT INTO scores (game_id, value, username) 
-        VALUES(%(game_id)s, %(value)s, %(username)s)
-        """
+    # DynamoDB doesn't support auto incrementing primary keys. So I've changed the scores table
+    # to use a composite key, with game_name as the primary and a timestamp as the secondary.
+    score_table.put_item(
+        Item={
+            "game": game,
+            "timestamp": str(datetime.datetime.now()),
+            "value": value,
+            "username": username,
+            # "parameters": params
+        }
     )
-    score_data = {
-        "game_id": game_id,
-        "value": value,
-        "username": username,
-    }
-    cursor.execute(query, score_data)
-    conn.commit()
-    conn.close()
 
     toReturn = {
         "status": "success",
         "message": ""
     }
     return prepare_response(toReturn)
+
+
+# - example: http://127.0.0.1:5000/game
+#   should include parameters in form (form-data in postman)
+@app.route('/game', methods=['POST'])
+def add_game():
+    form = json.loads(request.data.decode())
+    name = form['name']
+    publisher = form['publisher']
+    description = form['description']
+    username = form['username']
+    # picture_file = form['picture']???
+
+    # Make sure user is valid
+    response = user_table.get_item(
+        Key={
+            "username": username
+        }
+    )
+    if response.get('Item') is None:
+        return prepare_response({
+            "status": "fail",
+            "message": "Invalid Username"
+        })
+
+    # TODO: add picture to an S3 bucket and get link to it
+
+    game_table.put_item(
+        Item={
+            "name": name,
+            "publisher": publisher,
+            "description": description,
+            "username": username
+            # "image": s3_image_link
+        }
+    )
+
+    return prepare_response({
+        "status": "success",
+        "message": ""
+    })
 
 
 # - example: http://127.0.0.1:5000/games
