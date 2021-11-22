@@ -3,18 +3,23 @@ from flask import Flask, redirect, url_for, request, jsonify
 from flask.json import JSONDecoder
 from flask_cors import CORS
 import json
-import mysql.connector
+# import mysql.connector
+import boto3
 
 app = Flask(__name__)
 CORS(app)
 
-def connect():
-    return mysql.connector.connect(
-        host="localhost",
-        user="root",
-        password="",
-        database="myDB"
-    )
+dynamo = boto3.client('dynamodb')
+user_table = 'users'
+game_table = 'games'
+
+# def connect():
+#     return mysql.connector.connect(
+#         host="localhost",
+#         user="root",
+#         password="",
+#         database="myDB"
+#     )
 
 class User:
     def __init__(self, username, password, email):
@@ -47,24 +52,35 @@ def login():
     username = form['username']
     password = form['password']
 
-    conn = connect()
-    cursor = conn.cursor()
+    # conn = connect()
+    # cursor = conn.cursor()
 
-    query = """
-        SELECT * FROM users 
-        WHERE username = %(username)s 
-        AND password = %(password)s 
-    """
-    login_data = {
-        'username': username, 
-        'password': password
-    }
-    cursor.execute(query, login_data)
-    rows = cursor.fetchall()
-    conn.close()
+    # query = """
+    #     SELECT * FROM users 
+    #     WHERE username = %(username)s 
+    #     AND password = %(password)s 
+    # """
+    # login_data = {
+    #     'username': username, 
+    #     'password': password
+    # }
+    # cursor.execute(query, login_data)
+    # rows = cursor.fetchall()
+    # conn.close()
 
-    result = {}
-    if len(rows) == 0:
+    response = dynamo.get_item(
+        TableName=user_table,
+        Key={
+            'username': {
+                'S': username
+            },
+            'password': {
+                'S': password
+            }
+        }
+    )
+
+    if response['Item'] is None:
         result = {
             "status": "fail",
             "message": "Unable to find user with specified username / password"
@@ -74,8 +90,8 @@ def login():
         result = {
             "status": "success",
             "message": "",
-            'username': rows[0][0],
-            'email': rows[0][2]
+            'username': response['Item']['username']['S'],
+            'email': response['Item']['email']['S']
         }
     return prepare_response(result)
 
