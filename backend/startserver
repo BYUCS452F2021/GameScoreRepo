@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
 export AWS_SHARED_CREDENTIALS_FILE="$(pwd)/../.aws/credentials"
 export FLASK_APP=flask_api
+export FLASK_ENV=development
 python3 -m flask run

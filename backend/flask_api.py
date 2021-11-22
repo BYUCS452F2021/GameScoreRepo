@@ -9,9 +9,10 @@ import boto3
 app = Flask(__name__)
 CORS(app)
 
-dynamo = boto3.client('dynamodb')
-user_table = 'users'
-game_table = 'games'
+# Connect to DynamoDB tables
+dynamo = boto3.resource('dynamodb')
+user_table = dynamo.Table('users')
+game_table = dynamo.Table('games')
 
 # def connect():
 #     return mysql.connector.connect(
@@ -52,35 +53,18 @@ def login():
     username = form['username']
     password = form['password']
 
-    # conn = connect()
-    # cursor = conn.cursor()
-
-    # query = """
-    #     SELECT * FROM users 
-    #     WHERE username = %(username)s 
-    #     AND password = %(password)s 
-    # """
-    # login_data = {
-    #     'username': username, 
-    #     'password': password
-    # }
-    # cursor.execute(query, login_data)
-    # rows = cursor.fetchall()
-    # conn.close()
-
-    response = dynamo.get_item(
-        TableName=user_table,
+    # In a real application we'd obviously salt and hash the password
+    # and send it as part of our query, but this is easiest way for
+    # a simple class project
+    response = user_table.get_item(
         Key={
-            'username': {
-                'S': username
-            },
-            'password': {
-                'S': password
-            }
+            'username': username
         }
     )
 
-    if response['Item'] is None:
+    item = response.get('Item')
+
+    if item is None or item['password'] != password:
         result = {
             "status": "fail",
             "message": "Unable to find user with specified username / password"
@@ -90,8 +74,8 @@ def login():
         result = {
             "status": "success",
             "message": "",
-            'username': response['Item']['username']['S'],
-            'email': response['Item']['email']['S']
+            'username': item['username'],
+            'email': item['email']
         }
     return prepare_response(result)
 
@@ -106,32 +90,27 @@ def register():
     username = form['username']
     password = form['password']
     email = form['email']
-    
-    conn = connect()
-    cursor = conn.cursor()
 
     # Verify that username does not already exist
-    cursor.execute(
-        f"SELECT * FROM users WHERE username = '{username}'"
+    response = user_table.get_item(
+        Key={
+            'username': username
+        }
     )
-    rows = cursor.fetchall()
+
     result = {}
-    if len(rows) > 0:
-        conn.close()
+    if response.get('Item') is not None:
         result =  {
             "status": "fail", 
             "message": "User already exists"
         }
-    else:
-        query = "INSERT INTO users VALUES(%(username)s, %(password)s, %(email)s)"
-        userData = {
+    else:        
+        user_table.put_item(Item={
             "username": username, 
             "password": password, 
             "email": email
-        }
-        cursor.execute(query, userData)
-        conn.commit()
-        conn.close()
+        })
+
         result =  {
             "status": "success", 
             "message": "",
