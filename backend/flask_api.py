@@ -3,8 +3,8 @@ from flask import Flask, redirect, url_for, request, jsonify
 from flask.json import JSONDecoder
 from flask_cors import CORS
 import json
-# import mysql.connector
 import boto3
+from boto3.dynamodb.conditions import Key
 
 app = Flask(__name__)
 CORS(app)
@@ -216,91 +216,64 @@ def add_game():
 # - example: http://127.0.0.1:5000/games
 @app.route('/games', methods=['GET'])
 def games():
-    conn = connect()
-    cursor = conn.cursor()
-    cursor.execute(
-        """
-        SELECT * FROM games
-        """
-    )
+    response = game_table.scan()
 
-    results = []
-    for i in cursor:
-        results.append({
-            "game_id": i[0],
-            "name": i[1],
-            "publisher": i[2],
-            "description": i[3],
-            "username": i[4],
-        })
-
-    conn.close()
-    return prepare_response(results)
+    return prepare_response({
+        "status": "success",
+        "message": response['Items']
+    })
 
 
-# - example: http://127.0.0.1:5000/game?game_id=1
+# - example: http://127.0.0.1:5000/game?name="Ticket to Ride"
 @app.route('/game', methods=['GET'])
 def game():
-    game_id = request.args.get('game_id')
+    name = request.args.get('name')
+
+    response = game_table.get_item(
+        Key={
+            "name": name
+        }
+    )
     
-    conn = connect()
-    cursor = conn.cursor()
-    query = f"SELECT * FROM games WHERE game_id = {game_id}"
-    cursor.execute(query)
-
-    results = []
-    for i in cursor:
-        results.append({
-            "game_id": i[0],
-            "name": i[1],
-            "publisher": i[2],
-            "description": i[3],
-            "username": i[4],
-        })
-
-    conn.close()
-    
-    return prepare_response(results)
+    # TODO: return something useful when the item doesn't exist
+    return prepare_response(response.get('Item'))
 
 
-# - example: http://127.0.0.1:5000/game_scores?game_id=1&param_id=1
+# - example: http://127.0.0.1:5000/game_scores?game_name=Ticket to Ride
 @app.route('/game_scores', methods=['GET'])
 def get_game_scores():
-    game_id = request.args.get('game_id')
+    game_name = request.args.get('game_name')
     
-    conn = connect()
-    cursor = conn.cursor()
-    cursor.execute(f"SELECT * FROM scores WHERE game_id = {game_id}")
-    rows = cursor.fetchall()
-    conn.close()
+    response = score_table.query(
+        KeyConditionExpression=Key('game').eq(game_name)
+    )
 
-    return prepare_response(rows)
+    return prepare_response(response.get('Items'))
 
 # - example: http://127.0.0.1:5000/user_scores?username=test
 @app.route('/user_scores', methods=['GET'])
 def get_user_scores():
     username = request.args.get('username')
 
-    conn = connect()
-    cursor = conn.cursor()
-    cursor.execute(f"SELECT * FROM scores WHERE username = '{username}'")
-    rows = cursor.fetchall()
-    conn.close()
+    response = score_table.query(
+        IndexName="username-index",
+        KeyConditionExpression=Key('username').eq(username)
+    )
 
-    return prepare_response(rows)
+    return prepare_response(response.get('Items'))
 
 # - example: http://127.0.0.1:5000/user?username=test
 @app.route('/user', methods=['GET'])
 def get_user():
     username = request.args.get('username')
     
-    conn = connect()
-    cursor = conn.cursor()
-    cursor.execute(f"SELECT * FROM users WHERE username = '{username}' LIMIT 1")
-    rows = cursor.fetchall()
-    conn.close()
+    response = user_table.get_item(
+        Key={
+            "username": username
+        }
+    )
 
-    if len(rows) < 1:
+    if response.get('Item') is None:
         return prepare_response({
             "status": "fail",
             "message": "User not found"
@@ -308,8 +281,8 @@ def get_user():
 
     return prepare_response({
         "status": "success",
-        "username": rows[0][0],
-        "email": rows[0][2],
+        "username": response['Item']['username'],
+        "email": response['Item']['email'],
     })
 
 if __name__ == '__main__':
