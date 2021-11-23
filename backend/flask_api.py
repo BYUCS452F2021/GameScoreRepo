@@ -3,18 +3,18 @@ from flask import Flask, redirect, url_for, request, jsonify
 from flask.json import JSONDecoder
 from flask_cors import CORS
 import json
-import mysql.connector
+import boto3
+from boto3.dynamodb.conditions import Key
 
 app = Flask(__name__)
 CORS(app)
 
-def connect():
-    return mysql.connector.connect(
-        host="localhost",
-        user="root",
-        password="",
-        database="myDB"
-    )
+# Connect to DynamoDB tables
+dynamo = boto3.resource('dynamodb')
+user_table = dynamo.Table('users')
+game_table = dynamo.Table('games')
+score_table = dynamo.Table('scores')
+
 
 class User:
     def __init__(self, username, password, email):
@@ -47,24 +47,18 @@ def login():
     username = form['username']
     password = form['password']
 
-    conn = connect()
-    cursor = conn.cursor()
+    # In a real application we'd obviously salt and hash the password
+    # and send it as part of our query, but this is easiest way for
+    # a simple class project
+    response = user_table.get_item(
+        Key={
+            'username': username
+        }
+    )
 
-    query = """
-        SELECT * FROM users 
-        WHERE username = %(username)s 
-        AND password = %(password)s 
-    """
-    login_data = {
-        'username': username, 
-        'password': password
-    }
-    cursor.execute(query, login_data)
-    rows = cursor.fetchall()
-    conn.close()
+    item = response.get('Item')
 
-    result = {}
-    if len(rows) == 0:
+    if item is None or item['password'] != password:
         result = {
             "status": "fail",
             "message": "Unable to find user with specified username / password"
@@ -74,8 +68,8 @@ def login():
         result = {
             "status": "success",
             "message": "",
-            'username': rows[0][0],
-            'email': rows[0][2]
+            'username': item['username'],
+            'email': item['email']
         }
     return prepare_response(result)
 
@@ -90,32 +84,27 @@ def register():
     username = form['username']
     password = form['password']
     email = form['email']
-    
-    conn = connect()
-    cursor = conn.cursor()
 
     # Verify that username does not already exist
-    cursor.execute(
-        f"SELECT * FROM users WHERE username = '{username}'"
+    response = user_table.get_item(
+        Key={
+            'username': username
+        }
     )
-    rows = cursor.fetchall()
+
     result = {}
-    if len(rows) > 0:
-        conn.close()
+    if response.get('Item') is not None:
         result =  {
             "status": "fail", 
             "message": "User already exists"
         }
-    else:
-        query = "INSERT INTO users VALUES(%(username)s, %(password)s, %(email)s)"
-        userData = {
+    else:        
+        user_table.put_item(Item={
             "username": username, 
             "password": password, 
             "email": email
-        }
-        cursor.execute(query, userData)
-        conn.commit()
-        conn.close()
+        })
+
         result =  {
             "status": "success", 
             "message": "",
@@ -130,46 +119,51 @@ def register():
 @app.route('/score', methods=['POST'])
 def score():
     form = json.loads(request.data.decode())
-    game_id = form['game_id']
+    game = form['game']   # TODO: I changed this to game's name. The name of the game is a unique key and DynamoDB doesn't support auto-incremented primary keys
     value = form['value']
     username = form['username']
-    
-    conn = connect()
-    cursor = conn.cursor()
+    # Not sure how this is coming in as data...
+    # params = form['parameters']
 
     # check valid game
-    cursor.execute(f"SELECT * FROM games WHERE game_id = {game_id} LIMIT 1")
-    rows = cursor.fetchall()
-    if len(rows) < 1:
+    response = game_table.get_item(
+        Key={
+            "name": game
+        }
+    )
+    if response.get('Item') is None:
         return prepare_response({
             "status": "fail",
-            "message": "Invalid Game ID"
+            "message": "Invalid Game"
         })
+    
+    # TODO: we should probably check that the given parameters
+    # match the parameters in the game's attributes
 
     # check valid user
-    cursor.execute(f"SELECT * FROM users WHERE username = '{username}' LIMIT 1")
-    rows = cursor.fetchall()
-    if len(rows) < 1:
-        return  prepare_response({
+    response = user_table.get_item(
+        Key={
+            "username": username
+        }
+    )
+    if response.get('Item') is None:
+        return prepare_response({
             "status": "fail",
             "message": "Invalid Username"
         })
 
     # insert new score
-    query = (
-        """
-        INSERT INTO scores (game_id, value, username) 
-        VALUES(%(game_id)s, %(value)s, %(username)s)
-        """
+    # DynamoDB doesn't support auto incrementing primary keys. So I've changed the scores table
+    # to use a composite key, with game_name as the primary and a timestamp as the secondary.
+    score_table.put_item(
+        Item={
+            "game": game,
+            "timestamp": str(datetime.datetime.now()),
+            "value": value,
+            "username": username,
+            # "parameters": params
+        }
     )
-    score_data = {
-        "game_id": game_id,
-        "value": value,
-        "username": username,
-    }
-    cursor.execute(query, score_data)
-    conn.commit()
-    conn.close()
 
     toReturn = {
         "status": "success",
@@ -178,94 +172,108 @@ def score():
     return prepare_response(toReturn)
 
 
+# - example: http://127.0.0.1:5000/game
+#   should include parameters in form (form-data in postman)
+@app.route('/game', methods=['POST'])
+def add_game():
+    form = json.loads(request.data.decode())
+    name = form['name']
+    publisher = form['publisher']
+    description = form['description']
+    username = form['username']
+    # picture_file = form['picture']???
+
+    # Make sure user is valid
+    response = user_table.get_item(
+        Key={
+            "username": username
+        }
+    )
+    if response.get('Item') is None:
+        return prepare_response({
+            "status": "fail",
+            "message": "Invalid Username"
+        })
+
+    # TODO: add picture to an S3 bucket and get link to it
+
+    game_table.put_item(
+        Item={
+            "name": name,
+            "publisher": publisher,
+            "description": description,
+            "username": username
+            # "image": s3_image_link
+        }
+    )
+
+    return prepare_response({
+        "status": "success",
+        "message": ""
+    })
+
+
 # - example: http://127.0.0.1:5000/games
 @app.route('/games', methods=['GET'])
 def games():
-    conn = connect()
-    cursor = conn.cursor()
-    cursor.execute(
-        """
-        SELECT * FROM games
-        """
-    )
+    response = game_table.scan()
 
-    results = []
-    for i in cursor:
-        results.append({
-            "game_id": i[0],
-            "name": i[1],
-            "publisher": i[2],
-            "description": i[3],
-            "username": i[4],
-        })
-
-    conn.close()
-    return prepare_response(results)
+    return prepare_response({
+        "status": "success",
+        "message": response['Items']
+    })
 
 
-# - example: http://127.0.0.1:5000/game?game_id=1
+# - example: http://127.0.0.1:5000/game?name="Ticket to Ride"
 @app.route('/game', methods=['GET'])
 def game():
-    game_id = request.args.get('game_id')
+    name = request.args.get('name')
+
+    response = game_table.get_item(
+        Key={
+            "name": name
+        }
+    )
     
-    conn = connect()
-    cursor = conn.cursor()
-    query = f"SELECT * FROM games WHERE game_id = {game_id}"
-    cursor.execute(query)
-
-    results = []
-    for i in cursor:
-        results.append({
-            "game_id": i[0],
-            "name": i[1],
-            "publisher": i[2],
-            "description": i[3],
-            "username": i[4],
-        })
-
-    conn.close()
-    
-    return prepare_response(results)
+    # TODO: return something useful when the item doesn't exist
+    return prepare_response(response.get('Item'))
 
 
-# - example: http://127.0.0.1:5000/game_scores?game_id=1&param_id=1
+# - example: http://127.0.0.1:5000/game_scores?game_name=Ticket to Ride
 @app.route('/game_scores', methods=['GET'])
 def get_game_scores():
-    game_id = request.args.get('game_id')
+    game_name = request.args.get('game_name')
     
-    conn = connect()
-    cursor = conn.cursor()
-    cursor.execute(f"SELECT * FROM scores WHERE game_id = {game_id}")
-    rows = cursor.fetchall()
-    conn.close()
+    response = score_table.query(
+        KeyConditionExpression=Key('game').eq(game_name)
+    )
 
-    return prepare_response(rows)
+    return prepare_response(response.get('Items'))
 
 # - example: http://127.0.0.1:5000/user_scores?username=test
 @app.route('/user_scores', methods=['GET'])
 def get_user_scores():
     username = request.args.get('username')
 
-    conn = connect()
-    cursor = conn.cursor()
-    cursor.execute(f"SELECT * FROM scores WHERE username = '{username}'")
-    rows = cursor.fetchall()
-    conn.close()
+    response = score_table.query(
+        IndexName="username-index",
+        KeyConditionExpression=Key('username').eq(username)
+    )
 
-    return prepare_response(rows)
+    return prepare_response(response.get('Items'))
 
 # - example: http://127.0.0.1:5000/user?username=test
 @app.route('/user', methods=['GET'])
 def get_user():
     username = request.args.get('username')
     
-    conn = connect()
-    cursor = conn.cursor()
-    cursor.execute(f"SELECT * FROM users WHERE username = '{username}' LIMIT 1")
-    rows = cursor.fetchall()
-    conn.close()
+    response = user_table.get_item(
+        Key={
+            "username": username
+        }
+    )
 
-    if len(rows) < 1:
+    if response.get('Item') is None:
         return prepare_response({
             "status": "fail",
             "message": "User not found"
@@ -273,8 +281,8 @@ def get_user():
 
     return prepare_response({
         "status": "success",
-        "username": rows[0][0],
-        "email": rows[0][2],
+        "username": response['Item']['username'],
+        "email": response['Item']['email'],
     })
 
 if __name__ == '__main__':

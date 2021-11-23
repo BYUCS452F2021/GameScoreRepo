@@ -10,3 +10,4 @@ protobuf==3.19.0
 six==1.16.0
 typish==1.9.3
 Werkzeug==2.0.2
+boto3
