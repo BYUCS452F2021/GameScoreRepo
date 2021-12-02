@@ -67,7 +67,6 @@ def login():
         #TODO: this is a POST? should we record tokens or time of login?
         result = {
             "status": "success",
-            "message": "",
             'username': item['username'],
             'email': item['email']
         }
@@ -107,7 +106,6 @@ def register():
 
         result =  {
             "status": "success", 
-            "message": "",
             "username": username,
             "email": email
         }
@@ -166,8 +164,7 @@ def score():
     )
 
     toReturn = {
-        "status": "success",
-        "message": ""
+        "status": "success"
     }
     return prepare_response(toReturn)
 
@@ -208,8 +205,7 @@ def add_game():
     )
 
     return prepare_response({
-        "status": "success",
-        "message": ""
+        "status": "success"
     })
 
 
@@ -218,10 +214,7 @@ def add_game():
 def games():
     response = game_table.scan()
 
-    return prepare_response({
-        "status": "success",
-        "message": response['Items']
-    })
+    return prepare_response(response['Items'])
 
 
 # - example: http://127.0.0.1:5000/game?name="Ticket to Ride"
