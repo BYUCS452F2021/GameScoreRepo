@@ -5,19 +5,19 @@ import './GameTile.scss'
 type Props = {
     gameId: string
     gameName: string
+    imageUrl: string
 }
 
 function GameTile(props: Props) {
   const history = useHistory()
-  const imageUrl = process.env.PUBLIC_URL + '/GameImages/' + props.gameId + '.jpeg'
 
   function onClick() {
-    history.push('/game/' + props.gameId)
+    history.push('/game/' + props.gameName)
   }
 
   return (
     <div className="game-tile" onClick={onClick} key={props.gameId}>
-        <img className="game-picture" src={imageUrl} alt={props.gameName}/>
+        <img className="game-picture" src={props.imageUrl} alt={props.gameName}/>
         <div className="game-title">
             {props.gameName}
         </div>

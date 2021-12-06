@@ -118,11 +118,13 @@ def register():
 def score():
     form = json.loads(request.data.decode())
     game = form['game']   # TODO: I changed this to game's name. The name of the game is a unique key and DynamoDB doesn't support auto-incremented primary keys
-    params = form['value'] # [['Victory Points', 10], ['Players', 4]]
+    params = form['values'] # [['Victory Points', 10], ['Players', 4]]
     username = form['username']
     # Not sure how this is coming in as data...
     # params = form['parameters']
-
+    print(game)
+    print(params)
+    print(username)
     # check valid game
     response = game_table.get_item(
         Key={

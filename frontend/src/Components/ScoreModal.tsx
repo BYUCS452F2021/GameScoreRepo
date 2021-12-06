@@ -15,11 +15,26 @@ type GameDetails = {
   label: string
 }
 
+type Param = {
+  description: string;
+  name: string;
+}
+
+type Game = {
+  value: any;
+  label: any;
+  description: any;
+  availableParams: Array<Param>;
+  imageLink: any;
+  owner: any;
+  publisher: any;
+}
+
 function ScoreModal(props: Props) {
   const appContext = React.useContext(AppContext)
   const [options, setOptions] = useState<GameDetails[]>([])
-  const [currGame, setCurrGame] = useState<string>('')
-  const [currScore, setCurrScore] = useState<number | null>(null)
+  const [currGame, setCurrGame] = useState<Game|null>(null)
+  const [currScore, setCurrScore] = useState<Array<number | null>>([null])
   const [scoreError, setScoreError] = useState<boolean>(false)
 
   useEffect(() => {
@@ -31,8 +46,13 @@ function ScoreModal(props: Props) {
   }, [appContext?.backend])
 
   async function onSubmit() {
-    if (currScore && currGame !== '') {
-      const result = await appContext?.backend.submitScore(currGame, currScore, appContext.currUser)
+    if (currGame) {
+      const submittedScores = currGame.availableParams.map(function(e, i) {
+        return [e.name, currScore[i]];
+      });
+      console.log(submittedScores)
+
+      const result = await appContext?.backend.submitScore(currGame.label, submittedScores, appContext.currUser)
       if (result.success) {
         setScoreError(false)
         props.onClose()
@@ -40,19 +60,27 @@ function ScoreModal(props: Props) {
     }
     setScoreError(true)
   }
+  
+  function updateScore(e: number | null, idx: number) {
+    const currScores = [...currScore.slice(0, idx), e, ...currScore.slice(idx+1)]
+    setCurrScore(currScores)
+  }
 
-  function assertIsGameDetails(data: unknown): data is GameDetails {
+  function assertIsGame(data: unknown): data is Game {
     if (!data) {
       return false
     }
-    return (typeof data === 'object') && ('label' in (data as any) && typeof (data as any)['label'] === 'string') &&
-    ('value' in (data as any) && typeof (data as any)['value'] === 'number')
+    return true
   }
 
   function updateGame(e: unknown) {
-    if (assertIsGameDetails(e)) {
-      setCurrGame(e.value)
+    if (assertIsGame(e)) {
+      setCurrGame(e)
+      setCurrScore(Array(e.availableParams.length).fill(null))
+      return
     }
+    setCurrGame(null)
+    setCurrScore([null])
   }
 
   return ReactDOM.createPortal((
@@ -70,10 +98,16 @@ function ScoreModal(props: Props) {
                 Game:
                 <Select options={options} onChange={(newValue) => {updateGame(newValue)}} isSearchable isClearable className="game-menu" />
               </div>
-              <div className="entry-line">
-                Score:
-                <FluidInput type="number" id="score" min={0} value={currScore} setValue={setCurrScore} />
-              </div>
+              {currGame && 
+                currGame?.availableParams.map((param: Param, idx: number) => {
+                  return(
+                    <div className="entry-line" key={param.name}>
+                      {param.name + ': '}
+                      <FluidInput type="number" id="param" min={0} value={currScore[idx]} setValue={(e: number | null) => updateScore(e, idx)} />
+                    </div>
+                  )
+                })
+              }
               {
                 scoreError &&
                 <div>Error: Unable to Submit Score</div>

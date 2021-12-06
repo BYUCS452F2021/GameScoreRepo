@@ -3,15 +3,21 @@ import AppContext from '../Contexts/AppContext'
 import './ScoreList.scss'
 
 
-type Score = {
-  scoreId: number
-  gameName: string
-  username: string
-  value: number
+type Param =  {
+  description: string;
+  name: string;
+  value: string;
+}
+
+type Score =  {
+  game: string;
+  username: string;
+  timestamp: string;
+  params: Array<Param>;
 }
 
 type Props = {
-  gameId?: string
+  gameName?: string
   userId?: string
 }
 
@@ -19,26 +25,29 @@ type Props = {
 function ScoreList(props: Props) {
   const [scores, setScores] = useState<Score[]>([])
   const appContext = useContext(AppContext)
-  
+
   useEffect(() => {
     async function getScores() {
-      const scores = props.gameId ? await appContext?.backend.getScores(props.gameId) : await appContext?.backend.getUserScores(props.userId)
+      const scores = props.gameName ? await appContext?.backend.getScores(props.gameName) : await appContext?.backend.getUserScores(props.userId)
       setScores(scores)
     }
     getScores()
-  }, [appContext?.backend, props.gameId, props.userId])
+  }, [appContext?.backend, props.gameName, props.userId])
 
   function ScoreItem(score: Score) {
     return (
-      <div className='list-item' key={score.scoreId}>
-        <div className="info-item">
-          {'Game: ' + score.gameName}
-        </div>
+      <div className='list-item' key={score.username + score.timestamp + score.game}>
+        {
+          score.params.map((element: Param) => {
+            return (
+              <div className="info-item">
+                {element.name + ': ' + element.value}
+              </div>
+            )
+          })
+        }
         <div className="info-item">
           {'Username: ' + score.username}
-        </div>
-        <div className="info-item">
-          {'Score: ' + score.value}
         </div>
       </div>
     )
