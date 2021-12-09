@@ -118,11 +118,13 @@ def register():
 def score():
     form = json.loads(request.data.decode())
     game = form['game']   # TODO: I changed this to game's name. The name of the game is a unique key and DynamoDB doesn't support auto-incremented primary keys
-    value = form['value']
+    params = form['values'] # [['Victory Points', 10], ['Players', 4]]
     username = form['username']
     # Not sure how this is coming in as data...
     # params = form['parameters']
-
+    print(game)
+    print(params)
+    print(username)
     # check valid game
     response = game_table.get_item(
         Key={
@@ -135,8 +137,14 @@ def score():
             "message": "Invalid Game"
         })
     
-    # TODO: we should probably check that the given parameters
-    # match the parameters in the game's attributes
+    # check valid parameters
+    available_params = response.get('Item')['available_params']
+    for param in params:
+        if param[0] not in list(p['name'] for p in available_params):
+            return prepare_response({
+                "status": "fail",
+                "message": "Invalid Parameter"
+            })
 
     # check valid user
     response = user_table.get_item(
@@ -150,6 +158,10 @@ def score():
             "message": "Invalid Username"
         })
 
+    param_dicts = []
+    for param in params:
+        param_dicts.append({"name": param[0], "value": param[1]})
+
     # insert new score
     # DynamoDB doesn't support auto incrementing primary keys. So I've changed the scores table
     # to use a composite key, with game_name as the primary and a timestamp as the secondary.
@@ -157,9 +169,8 @@ def score():
         Item={
             "game": game,
             "timestamp": str(datetime.datetime.now()),
-            "value": value,
+            "params": param_dicts,
             "username": username,
-            # "parameters": params
         }
     )
 
@@ -221,7 +232,6 @@ def games():
 @app.route('/game', methods=['GET'])
 def game():
     name = request.args.get('name')
-
     response = game_table.get_item(
         Key={
             "name": name

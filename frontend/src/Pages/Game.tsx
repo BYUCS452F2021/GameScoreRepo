@@ -27,7 +27,7 @@ function Game(props: Props) {
         gameInfo &&
         <header className="Game-header">
           <h1>{gameInfo.name}</h1>
-          <ScoreList gameId={props.match.params.id}/>
+          <ScoreList gameName={gameInfo.name}/>
         </header>
       }
     </div>

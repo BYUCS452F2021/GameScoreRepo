@@ -3,18 +3,29 @@ import GameTile from '../Components/GameTile'
 import AppContext from '../Contexts/AppContext'
 import './Games.scss'
 
-type GamePair = {
-  value: string
-  label: string
+type Param = {
+  description: string;
+  name: string;
+}
+
+type Game = {
+  value: any;
+  label: any;
+  description: any;
+  availableParams: Array<Param>;
+  imageLink: any;
+  owner: any;
+  publisher: any;
 }
 
 function Games() {
-  const [allGames, setAllGames] = useState<GamePair[]>([])
+  const [allGames, setAllGames] = useState<Game[]>([])
   const appContext = useContext(AppContext)
 
   useEffect(() => {
     async function getAllGames() {
       const allGames = await appContext?.backend.getGames()
+      console.log(allGames)
       setAllGames(allGames)
     }
     getAllGames()
@@ -25,7 +36,7 @@ function Games() {
       <h1>All Games</h1>
       <div className="Games">
         <div className="game-display">
-          {allGames.map((game: GamePair) => React.createElement(GameTile, {gameId: game.value, gameName: game.label}))}
+          {allGames.map((game: Game) => React.createElement(GameTile, {gameId: game.value, gameName: game.label, imageUrl: game.imageLink}))}
         </div>
       </div>
     </div>
